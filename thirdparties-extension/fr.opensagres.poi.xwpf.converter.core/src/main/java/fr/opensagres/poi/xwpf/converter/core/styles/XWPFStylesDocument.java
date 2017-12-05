@@ -51,6 +51,7 @@ import org.openxmlformats.schemas.drawingml.x2006.main.ThemeDocument;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTBorder;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTDocDefaults;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTFont;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTFramePr;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTNumPr;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTP;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTPPr;
@@ -90,6 +91,7 @@ import fr.opensagres.poi.xwpf.converter.core.styles.paragraph.ParagraphBorderBot
 import fr.opensagres.poi.xwpf.converter.core.styles.paragraph.ParagraphBorderLeftValueProvider;
 import fr.opensagres.poi.xwpf.converter.core.styles.paragraph.ParagraphBorderRightValueProvider;
 import fr.opensagres.poi.xwpf.converter.core.styles.paragraph.ParagraphBorderTopValueProvider;
+import fr.opensagres.poi.xwpf.converter.core.styles.paragraph.ParagraphFrameValueProvider;
 import fr.opensagres.poi.xwpf.converter.core.styles.paragraph.ParagraphIndentationFirstLineValueProvider;
 import fr.opensagres.poi.xwpf.converter.core.styles.paragraph.ParagraphIndentationHangingValueProvider;
 import fr.opensagres.poi.xwpf.converter.core.styles.paragraph.ParagraphIndentationLeftValueProvider;
@@ -466,6 +468,14 @@ public class XWPFStylesDocument
                                                                                                                                      table,
                                                                                                                                      this );
     }
+    
+    public CTFramePr getFrame( XWPFParagraph docxParagraph ) {
+    	return ParagraphFrameValueProvider.INSTANCE.getValue(  docxParagraph, this );
+    }
+    
+    public CTFramePr getFrame( CTPPr pPr ) {
+    	return ParagraphFrameValueProvider.INSTANCE.getValue(  pPr );
+    }    
 
     public CTBorder getBorderTop( XWPFParagraph docxParagraph )
     {

@@ -26,6 +26,7 @@ package fr.opensagres.poi.xwpf.converter.pdf.internal.elements;
 
 import static fr.opensagres.poi.xwpf.converter.core.utils.DxaUtil.dxa2points;
 
+import java.io.IOException;
 import java.io.OutputStream;
 
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTPageMar;
@@ -35,9 +36,13 @@ import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTSectPr;
 import com.lowagie.text.Document;
 import com.lowagie.text.DocumentException;
 import com.lowagie.text.Element;
+import com.lowagie.text.Font;
 import com.lowagie.text.Paragraph;
+import com.lowagie.text.Phrase;
 import com.lowagie.text.Rectangle;
+import com.lowagie.text.pdf.BaseFont;
 import com.lowagie.text.pdf.ColumnText;
+import com.lowagie.text.pdf.PdfContentByte;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
@@ -89,12 +94,81 @@ public class StylableDocument
             // master page was changed but there was no explicit page break
             pageBreak();
         }
-        text.addElement( element );
-        StylableDocumentSection.getCell( layoutTable, colIdx ).getColumn().addElement( element );
-        simulateText();
-        documentEmpty = false;
+//        if(element instanceof StylableParagraph) {
+//        	System.out.println("Found StylableParagraph");
+//        	StylableParagraph sp = (StylableParagraph) element;
+//        	PdfPTable table = new PdfPTable(1);
+//			table.addCell(sp);
+//			table.setTotalWidth(200f);
+//			table.getRow(0).setMaxHeights(60.0f);
+//			table.writeSelectedRows(0, -1, 100f, 100f, writer.getDirectContent());      
+//
+//			documentEmpty = false;
+//        }
+        
+        if(element instanceof AbsoluteTable) {
+        	System.out.println("Found AbsoluteTableElement");
+        	AbsoluteTable table = (AbsoluteTable) element;
+//        	PdfPTable newTable = new PdfPTable(1);
+//			newTable.addCell(new Paragraph("Testing 1234"));
+			System.out.println("Table X: " + table.getAbsX());
+			System.out.println("Table Y: " + table.getAbsY());
+			System.out.println("Total Width : " + table.getTotalWidth());
+			System.out.println("Total Height : " + table.getRowHeight(0));
+//			newTable.setTotalWidth(table.getTotalWidth());
+//			newTable.getRow(0).setMaxHeights(table.getRowHeight(0));
+			
+			table.writeSelectedRows(0, -1, table.getAbsX(), table.getAbsY(), writer.getDirectContent());
+//			newTable.writeSelectedRows(0, -1, 110f, table.getAbsY(), writer.getDirectContent());      
+					
+            documentEmpty = false;
+
+        } else {
+            text.addElement( element );
+            StylableDocumentSection.getCell( layoutTable, colIdx ).getColumn().addElement( element );
+            simulateText();
+            documentEmpty = false;
+        }
     }
 
+    /**
+     * Draws a Paragraph inside a given column and returns the Y value at the end of the text.
+     * @param  canvas    the canvas to which we'll add the Paragraph
+     * @param  rect      the dimensions of the column
+     * @param  p         the Paragraph we want to add
+     * @param  simulate  do we add the paragraph for real?
+     * @return the Y coordinate of the end of the text
+     * @throws com.itextpdf.text.DocumentException
+     */
+//    public float drawColumnText(ColumnText ct, Rectangle rect, Element p, boolean simulate) throws DocumentException {
+//        ColumnText ct = new ColumnText(canvas);
+//        ct.setSimpleColumn(rect.getLeft(), rect.getBottom(), rect.getLeft() + rect.getWidth(), rect.getBottom() + rect.getHeight());
+//    	System.out.println("Rectangle: " + rect.getLeft() + ", " + rect.getBottom()  + ", " +  rect.getLeft() + rect.getWidth()  + ", " + rect.getBottom() + rect.getHeight());
+//    	
+//    	PdfContentByte cb = writer.getDirectContent();
+//    	cb.saveState();
+//    	cb.rectangle(50f, 70f, 30f, 100f);
+//    	cb.stroke();
+//       	cb.restoreState();
+//       	BaseFont bf;
+//		try 
+//			bf = BaseFont.createFont(BaseFont.HELVETICA_BOLD, "Cp1252", BaseFont.EMBEDDED);
+//	    	Font f = new Font(bf, 13);
+////	    	ColumnText ct2= new ColumnText(cb);
+//	    	
+//	    	ct.addElement(new Paragraph("Test", f));
+//	    	ct.setSimpleColumn(50f, 70f, 30f, 100f);
+////	    	ct.addText(new Phrase("Test", f));
+//	    	ct.go(simulate);
+//		} catch (IOException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+////    	ct.go();
+//		 simulateText();
+//        return ct.getYLine();
+//    }    
+    
     public void columnBreak()
     {
         if ( colIdx + 1 < layoutTable.getNumberOfColumns() )

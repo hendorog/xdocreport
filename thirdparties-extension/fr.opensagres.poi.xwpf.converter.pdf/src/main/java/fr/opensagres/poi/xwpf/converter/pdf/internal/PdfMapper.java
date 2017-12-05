@@ -24,11 +24,16 @@
  */
 package fr.opensagres.poi.xwpf.converter.pdf.internal;
 
+import static fr.opensagres.poi.xwpf.converter.core.utils.DxaUtil.dxa2points;
 import static fr.opensagres.poi.xwpf.converter.core.utils.DxaUtil.emu2points;
 
 import java.io.OutputStream;
 import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.logging.Logger;
 
 import org.apache.poi.xwpf.usermodel.*;
@@ -40,6 +45,8 @@ import org.openxmlformats.schemas.drawingml.x2006.wordprocessingDrawing.STWrapTe
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTBookmark;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTBorder;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTBr;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTFrame;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTFramePr;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTHdrFtrRef;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTLvl;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTPPr;
@@ -62,7 +69,9 @@ import com.lowagie.text.Element;
 import com.lowagie.text.Font;
 import com.lowagie.text.Image;
 import com.lowagie.text.Paragraph;
+import com.lowagie.text.Phrase;
 import com.lowagie.text.Rectangle;
+import com.lowagie.text.pdf.PdfCell;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.draw.DottedLineSeparator;
@@ -82,6 +91,7 @@ import fr.opensagres.poi.xwpf.converter.core.styles.paragraph.ParagraphIndentati
 import fr.opensagres.poi.xwpf.converter.core.utils.DxaUtil;
 import fr.opensagres.poi.xwpf.converter.core.utils.StringUtils;
 import fr.opensagres.poi.xwpf.converter.pdf.PdfOptions;
+import fr.opensagres.poi.xwpf.converter.pdf.internal.elements.AbsoluteTable;
 import fr.opensagres.poi.xwpf.converter.pdf.internal.elements.StylableAnchor;
 import fr.opensagres.poi.xwpf.converter.pdf.internal.elements.StylableDocument;
 import fr.opensagres.poi.xwpf.converter.pdf.internal.elements.StylableHeaderFooter;
@@ -132,6 +142,8 @@ public class PdfMapper extends
 	private StylableHeaderFooter pdfFooter;
 
 	private Integer expectedPageCount;
+	
+	private Map<Integer, IITextContainer> frameContainerList = new HashMap<Integer, IITextContainer>();
 
 	public PdfMapper(XWPFDocument document, OutputStream out,
 			PdfOptions options, Integer expectedPageCount) throws Exception {
@@ -152,7 +164,11 @@ public class PdfMapper extends
 	}
 
 	@Override
-	protected void endVisitDocument() throws Exception {
+	protected void endVisitDocument(IITextContainer container) throws Exception {
+		for (Integer frameHash : frameContainerList.keySet()) {
+			container.addElement((Element)frameContainerList.get(frameHash));
+		}
+		
 		pdfDocument.close();
 		out.close();
 	}
@@ -224,6 +240,74 @@ public class PdfMapper extends
 
 	// ------------------------- Paragraph
 
+	protected int getFrameHash(CTFramePr frame) {
+		return Objects.hash(frame.getX(), frame.getY(), frame.getW(), frame.getH());
+	}
+	
+	protected IITextContainer findExistingFrameContainer(CTFramePr frame) {
+		IITextContainer container = frameContainerList.get(getFrameHash(frame));
+		
+		if(container == null) {
+			container = createNewFrameContainer(frame);
+		}
+		
+		return container;
+	}
+
+	protected IITextContainer createNewFrameContainer(CTFramePr frame) {
+		Rectangle frameRect = new Rectangle(frame.getX().floatValue(), frame.getY().floatValue(), frame.getW().add(frame.getX()).floatValue() , frame.getH().add(frame.getY()).floatValue());
+//		pdfParagraph.setFrame(frameRect);
+		
+//    	Rectangle rect = sp.getFrame();
+//    	System.out.println("Rectangle: L:" + frameRect.getLeft() + ", B:" + frameRect.getBottom()  + ", W:" +  frameRect.getWidth()  + ", H:" + frameRect.getHeight());
+
+    	Rectangle pageSize = pdfDocument.getPageSize();
+    	
+    	float absX = dxa2points(frame.getX().floatValue());
+		float absY = pageSize.getHeight() - dxa2points(frame.getY().floatValue()); 
+
+		AbsoluteTable table = createAbsoluteContainerTable(absX, absY, dxa2points(frameRect.getWidth()), dxa2points(frameRect.getHeight()));
+//    	AbsoluteTable table = new AbsoluteTable(absX, absY, 1);
+//    	PdfPCell cell = new PdfPCell();
+//    	cell.setBorder(0);
+//    	cell.setLeading(0f, 0f);
+//    	cell.setBorderWidth(0f);
+//    	table.addCell(cell);
+//    	table.setTotalWidth(dxa2points(frameRect.getWidth()));    
+//    	table.getRow(0).setMaxHeights(dxa2points(frameRect.getHeight()));
+    	
+    	frameContainerList.put(getFrameHash(frame), table);
+    	return table;
+    	
+//    	cell.addElement(pdfParagraph);
+//		table.addCell(pdfParagraph);
+//		table.setWidthPercentage(50.0f);
+//		
+//		Rectangle pageSize = stylabl writer.getPageSize();
+//		float bottom = pageSize.getHeight() - dxa2points(rect.getBottom());
+//		float height = pageSize.getHeight() - dxa2points(rect.getHeight());
+//		pdfDocument.		
+	}
+	
+	protected AbsoluteTable createAbsoluteContainerTable(float x, float y, float width, float height) {
+    	AbsoluteTable table = new AbsoluteTable(x, y, 1);
+//    	System.out.println("absX: " + absX + ", absY: " + absY);
+    	PdfPCell cell = new PdfPCell();
+//    	Paragraph p = (new Paragraph(""));
+//    	p.setIndentationLeft(0f);
+//    	cell.addElement(p);
+//    	cell.setBorder(0);
+    	cell.setLeading(0f, 0f);
+    	cell.setBorderWidth(0f);
+    	cell.setPadding(0f);
+//    	cell.setIndent(0f);
+    	table.addCell(cell);
+    	table.setTotalWidth(width);    
+    	table.getRow(0).setMaxHeights(height);		
+    	
+    	return table;
+	}
+	
 	@Override
 	protected IITextContainer startVisitParagraph(XWPFParagraph docxParagraph,
 			ListItemContext itemContext, IITextContainer pdfParentContainer)
@@ -233,7 +317,7 @@ public class PdfMapper extends
 		// create PDF paragraph
 		StylableParagraph pdfParagraph = pdfDocument
 				.createParagraph(pdfParentContainer);
-
+		
 		// indentation left
 		Float indentationLeft = stylesDocument
 				.getIndentationLeft(docxParagraph);
@@ -333,6 +417,28 @@ public class PdfMapper extends
 		CTBorder borderRight = stylesDocument.getBorderRight(docxParagraph);
 		pdfParagraph.setBorder(borderRight, Rectangle.RIGHT);
 
+		// Is paragraph inside a Frame
+		CTFramePr frame = stylesDocument.getFrame(docxParagraph);
+		if(frame != null) {
+//			findExistingFrameContainer(frame).addElement(pdfParagraph);
+//			Rectangle frameRect = new Rectangle(frame.getX().floatValue(), frame.getY().floatValue(), frame.getW().add(frame.getX()).floatValue() , frame.getH().add(frame.getX()).floatValue());
+//			pdfParagraph.setFrame(frameRect);
+			
+//	    	Rectangle rect = sp.getFrame();
+//	    	System.out.println("Rectangle: L:" + frameRect.getLeft() + ", R:" + frameRect.getBottom()  + ", W:" +  frameRect.getWidth()  + ", H:" + frameRect.getHeight());
+//	    	AbsoluteTable table = new AbsoluteTable(1);
+//	    	PdfPCell cell = table.getDefaultCell();
+//	    	cell.addElement(pdfParagraph);
+//			table.addCell(pdfParagraph);
+//			table.setWidthPercentage(50.0f);
+//			table.setTotalWidth(dxa2points(frameRect.getWidth()));
+//			Rectangle pageSize = writer.getPageSize();
+//			float bottom = pageSize.getHeight() - dxa2points(rect.getBottom());
+//			float height = pageSize.getHeight() - dxa2points(rect.getHeight());
+//			pdfDocument.
+			
+		}	
+		
 		if (itemContext != null) {
 			CTLvl lvl = itemContext.getLvl();
 			CTPPr lvlPPr = lvl.getPPr();
@@ -407,10 +513,17 @@ public class PdfMapper extends
 			IITextContainer pdfParentContainer,
 			IITextContainer pdfParagraphContainer) throws Exception {
 		// add the iText paragraph in the current parent container.
-		ExtendedParagraph pdfParagraph = (ExtendedParagraph) pdfParagraphContainer;
-		pdfParentContainer.addElement(pdfParagraph.getElement());
+		ExtendedParagraph pdfParagraph = (ExtendedParagraph) pdfParagraphContainer;		
+		CTFramePr frame = stylesDocument.getFrame(docxParagraph);
+		if(frame != null) {
+			pdfParagraph.setFirstLineIndent(0f);
+			findExistingFrameContainer(frame).addElement(pdfParagraph);
+		} else {
+			pdfParentContainer.addElement(pdfParagraph.getElement());			
+		}
 
 		this.currentRunX = null;
+
 	}
 
 	// ------------------------- Run
@@ -1193,8 +1306,7 @@ public class PdfMapper extends
 
 				IITextContainer parentOfParentContainer = pdfParentContainer
 						.getITextContainer();
-				if (parentOfParentContainer != null
-						&& parentOfParentContainer instanceof PdfPCell) {
+				if (parentOfParentContainer != null && parentOfParentContainer instanceof PdfPCell) {
 					parentOfParentContainer.addElement(img);
 				} else {
 					float chunkOffsetX = 0;
@@ -1218,50 +1330,63 @@ public class PdfMapper extends
 						}
 					}
 
+					
 					float chunkOffsetY = 0;
 					boolean useExtendedImage = false;
-					if (STRelFromV.PARAGRAPH.equals(relativeFromV)) {
-						useExtendedImage = true;
-					}
 
-					if (useExtendedImage) {
-						ExtendedImage extImg = new ExtendedImage(img, -offsetY);
-
+					if(STRelFromH.PAGE.equals(relativeFromH) && STRelFromV.PAGE.equals(relativeFromV)) {
+						chunkOffsetY = pdfDocument.top() - offsetY;
+//						chunkOffsetY = offsetY + pdfDocument.bottom();
+						AbsoluteTable absoluteContainer = createAbsoluteContainerTable(chunkOffsetX, chunkOffsetY, emu2points(x), emu2points(y));
+						absoluteContainer.getSingleCell().addElement(new Chunk(img, 0f, 0f, false));
+//						absoluteContainer.getSingleCell().addElement(new Paragraph("Test1"));
+//						absoluteContainer.getSingleCell().addElement(new Paragraph("Test2"));
+						Integer hash = Objects.hash(chunkOffsetX, chunkOffsetY, emu2points(x), emu2points(y));
+						frameContainerList.put(hash, absoluteContainer); // <-- gets added to pdf in the endDocument method
+					} else {
 						if (STRelFromV.PARAGRAPH.equals(relativeFromV)) {
-							chunkOffsetY = -extImg.getScaledHeight();
+							useExtendedImage = true;
 						}
-
-						Chunk chunk = new Chunk(extImg, chunkOffsetX,
-								chunkOffsetY, false);
-						pdfParentContainer.addElement(chunk);
-					}
-					/*
-					 * float chunkOffsetY = 0; if ( wrapText != null ) {
-					 * chunkOffsetY = -img.getScaledHeight(); } boolean
-					 * useExtendedImage = offsetY != null; // if (
-					 * STRelFromV.PARAGRAPH.equals( relativeFromV ) ) // { //
-					 * useExtendedImage = true; // } // if ( useExtendedImage )
-					 * { float imgY = -offsetY; if ( pdfHeader != null ) { float
-					 * headerY = pdfHeader.getY() != null ? pdfHeader.getY() :
-					 * 0; imgY += - img.getScaledHeight() + headerY; }
-					 * ExtendedImage extImg = new ExtendedImage( img, imgY ); //
-					 * if ( STRelFromV.PARAGRAPH.equals( relativeFromV ) ) // {
-					 * // chunkOffsetY = -extImg.getScaledHeight(); // } Chunk
-					 * chunk = new Chunk( extImg, chunkOffsetX, chunkOffsetY,
-					 * false ); pdfParentContainer.addElement( chunk ); }
-					 */
-					else {
-						if (pdfParentContainer instanceof Paragraph) {
-							// I don't know why but we need add some spacing
-							// before in the paragraph
-							// otherwise the image cut the text of the below
-							// paragraph (see FormattingTests JUnit)?
-							Paragraph paragraph = (Paragraph) pdfParentContainer;
-							paragraph.setSpacingBefore(paragraph
-									.getSpacingBefore() + 5f);
+	
+						if (useExtendedImage) {
+							ExtendedImage extImg = new ExtendedImage(img, -offsetY);
+	
+							if (STRelFromV.PARAGRAPH.equals(relativeFromV)) {
+								chunkOffsetY = -extImg.getScaledHeight();
+							}
+	
+							Chunk chunk = new Chunk(extImg, chunkOffsetX,
+									chunkOffsetY, false);
+							pdfParentContainer.addElement(chunk);
 						}
-						pdfParentContainer.addElement(new Chunk(img,
-								chunkOffsetX, chunkOffsetY, false));
+						/*
+						 * float chunkOffsetY = 0; if ( wrapText != null ) {
+						 * chunkOffsetY = -img.getScaledHeight(); } boolean
+						 * useExtendedImage = offsetY != null; // if (
+						 * STRelFromV.PARAGRAPH.equals( relativeFromV ) ) // { //
+						 * useExtendedImage = true; // } // if ( useExtendedImage )
+						 * { float imgY = -offsetY; if ( pdfHeader != null ) { float
+						 * headerY = pdfHeader.getY() != null ? pdfHeader.getY() :
+						 * 0; imgY += - img.getScaledHeight() + headerY; }
+						 * ExtendedImage extImg = new ExtendedImage( img, imgY ); //
+						 * if ( STRelFromV.PARAGRAPH.equals( relativeFromV ) ) // {
+						 * // chunkOffsetY = -extImg.getScaledHeight(); // } Chunk
+						 * chunk = new Chunk( extImg, chunkOffsetX, chunkOffsetY,
+						 * false ); pdfParentContainer.addElement( chunk ); }
+						 */
+						else {
+							if (pdfParentContainer instanceof Paragraph) {
+								// I don't know why but we need add some spacing
+								// before in the paragraph
+								// otherwise the image cut the text of the below
+								// paragraph (see FormattingTests JUnit)?
+								Paragraph paragraph = (Paragraph) pdfParentContainer;
+								paragraph.setSpacingBefore(paragraph
+										.getSpacingBefore() + 5f);
+							}
+							pdfParentContainer.addElement(new Chunk(img,
+									chunkOffsetX, chunkOffsetY, false));
+						}
 					}
 				}
 

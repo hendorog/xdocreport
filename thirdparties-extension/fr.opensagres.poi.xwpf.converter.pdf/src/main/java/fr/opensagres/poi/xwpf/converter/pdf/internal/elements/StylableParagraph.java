@@ -62,6 +62,8 @@ public class StylableParagraph
     private int listItemFontStyle = -1;
 
     private Color listItemFontColor;
+    
+    private Rectangle frame;
 
     public StylableParagraph( StylableDocument ownerDocument, IITextContainer parent )
     {
@@ -275,5 +277,13 @@ public class StylableParagraph
             super.setMultipliedLeading( originMultipliedLeading * multiplier );
         }
     }
+
+	public Rectangle getFrame() {
+		return frame;
+	}
+
+	public void setFrame(Rectangle frame) {
+		this.frame = frame;
+	}
 
 }

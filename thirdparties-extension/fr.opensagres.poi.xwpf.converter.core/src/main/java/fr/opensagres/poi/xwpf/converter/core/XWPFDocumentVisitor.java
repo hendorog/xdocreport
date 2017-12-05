@@ -182,7 +182,7 @@ public abstract class XWPFDocumentVisitor<T, O extends Options, E extends IXWPFM
         List<IBodyElement> bodyElements = document.getBodyElements();
         visitBodyElements( bodyElements, container );
         // end document
-        endVisitDocument();
+        endVisitDocument(container);
     }
 
     /**
@@ -199,7 +199,7 @@ public abstract class XWPFDocumentVisitor<T, O extends Options, E extends IXWPFM
      * 
      * @throws Exception
      */
-    protected abstract void endVisitDocument()
+    protected abstract void endVisitDocument(T container)
         throws Exception;
 
     // ------------------------------ XWPF Elements visitor -----------
