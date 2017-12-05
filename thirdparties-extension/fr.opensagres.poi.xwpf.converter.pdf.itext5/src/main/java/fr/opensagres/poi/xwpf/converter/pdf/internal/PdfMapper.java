@@ -153,7 +153,7 @@ public class PdfMapper extends
 	}
 
 	@Override
-	protected void endVisitDocument() throws Exception {
+	protected void endVisitDocument(IITextContainer container) throws Exception {
 		pdfDocument.close();
 		out.close();
 	}
