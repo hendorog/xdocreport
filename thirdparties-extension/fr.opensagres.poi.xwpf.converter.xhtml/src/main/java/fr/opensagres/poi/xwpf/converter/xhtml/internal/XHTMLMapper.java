@@ -146,7 +146,7 @@ public class XHTMLMapper
     }
 
     @Override
-    protected void endVisitDocument()
+    protected void endVisitDocument(Object container)
         throws Exception
     {
         if ( pageDiv )
