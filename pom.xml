@@ -2,9 +2,25 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>fr.opensagres.xdocreport</groupId>
 	<artifactId>xdocreport-parent</artifactId>
-	<version>2.0.2-SNAPSHOT</version>
+	<version>2.0.2.1</version>
 	<packaging>pom</packaging>
 	<description>XDocReport means XML Document reporting. It's Java API to merge XML document created with MS Office (docx) or OpenOffice (odt), LibreOffice (odt) with a Java model to generate report and convert it if you need to another format (PDF, XHTML...).</description>
+	<repositories>
+	    <repository>
+            <id>repo.doylesails.us-east.io</id>
+            <url>s3://repo.doylesails.us-east.io/release</url>
+        </repository>		
+	</repositories>
+	<distributionManagement>
+	    <snapshotRepository>
+	      <id>repo.doylesails.io</id>
+	      <url>s3://repo.doylesails.us-east.io/snapshot</url>
+	    </snapshotRepository>
+	    <repository>
+	      <id>repo.doylesails.io</id>
+	      <url>s3://repo.doylesails.us-east.io/release</url>
+	    </repository>		
+	</distributionManagement>
 	<parent>
 		<groupId>org.sonatype.oss</groupId>
 		<artifactId>oss-parent</artifactId>
@@ -24,6 +40,14 @@
 	</properties>
 	<build>
 		<defaultGoal>install</defaultGoal>
+	    <extensions>
+	        <extension>
+	            <groupId>com.allogy.maven.wagon</groupId>
+	            <artifactId>maven-s3-wagon</artifactId>
+	            <version>1.1.0</version>
+	        </extension>
+        </extensions>	
+		
 		<plugins>
 			<plugin>
 				<artifactId>maven-compiler-plugin</artifactId>
@@ -67,7 +91,7 @@
 					</execution>
 				</executions>
 				<configuration>
-					<!-- <unpackBundle>true</unpackBundle> -->
+					<!-- <unpackBundle>true</unpackBundle>-->
 					<instructions>
 						<_include>TEMPLATE.MF</_include>
 						<_snapshot>${osgi-version-qualifier}</_snapshot>
@@ -200,7 +224,6 @@
 			</plugins>
 		</pluginManagement>
 	</build>
-
 	<developers>
 		<developer>
 			<id>angelozerr</id>
@@ -244,8 +267,8 @@
 		<connection>scm:git:https://github.com/opensagres/xdocreport.git</connection>
 		<developerConnection>scm:git:https://github.com/opensagres/xdocreport.git</developerConnection>
 		<url>https://github.com/opensagres/xdocreport/</url>
-	  <tag>HEAD</tag>
-  </scm>
+		<tag>HEAD</tag>
+	</scm>
 	<modules>
 		<module>thirdparties-extension</module>
 		<module>core</module>
